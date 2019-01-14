@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
+	"go/format"
 	"os"
 	"path"
 	"path/filepath"
@@ -31,6 +33,7 @@ var (
 	valueTypePackage      string
 	valueTypePackageShort string
 	valueTypeIsPointer    bool
+	getDefault            bool
 
 	reserved = []string{
 		"i", "k", "v", "keys", "onceToken", "value", "ok", "otherMap",
@@ -49,25 +52,28 @@ func init() {
 	flag.StringVar(&outFileName, "o", "", "")
 	flag.StringVar(&internalMapName, "i", "internal", "")
 	flag.BoolVar(&noMutex, "xm", false, "")
+	flag.BoolVar(&getDefault, "d", false, "")
 }
 
 func usage() {
-	printBold("C A R T O")
+	printBold("C A R T O\n")
+	printInfo("Maps made easy")
 	usg := `
 usage:
--p      package name __
--s      struct name __
--k      key type __
--v      value type __
+-p      package name !
+-s      struct name  !
+-k      key type     !
+-v      value type   !
 -r      receiver name (defaults to lowercase first char of struct name)
 -rv     receivers are by value
--b      "Get" also returns a bool value indicating if the key exists in the internal map
+-b      "Get" return signature includes a bool value indicating if the key exists in the internal map
+-d      "Get" signature has second parameter for default return value when key does not exist in the internal map
 -lz     will lazy-instantiate the internal map when a write operation is used
 -o      output file name (if omitted, prints to STDOUT)
 -i      variable name for internal map (defaults to internal)
 -xm     operations will not be mutexed
 `
-	usg = strings.Replace(usg, "__", "\033[33m(required)\033[30m", -1)
+	usg = strings.Replace(usg, "!", "\033[33m(required)\033[0m", -1)
 	printPlain(usg)
 }
 
@@ -95,30 +101,22 @@ func main() {
 	if keyType == "" {
 		errors = append(errors, "   - no key type specified")
 	} else {
-		keyTypeIsPointer = keyType[0] == '*'
-		if keyTypeIsPointer {
-			keyType = keyType[1:]
+		var keyTypeErr error
+		keyTypePackage, keyType, keyTypeErr = parsePackage(keyType)
+		if keyTypeErr != nil {
+			errors = append(errors, keyTypeErr.Error())
 		}
-		keyTypePackage = path.Dir(keyType)
-		if len(keyTypePackage) > 0 {
-			keyTypePackageShort = path.Base(keyTypePackage) + "."
-		}
-		keyType = path.Base(keyType)
 	}
 
 	// check value type
 	if valueType == "" {
 		errors = append(errors, "   - no value type specified")
 	} else {
-		valueTypeIsPointer = valueType[0] == '*'
-		if valueTypeIsPointer {
-			valueType = valueType[1:]
+		var valueTypeErr error
+		valueTypePackage, valueType, valueTypeErr = parsePackage(valueType)
+		if valueTypeErr != nil {
+			errors = append(errors, valueTypeErr.Error())
 		}
-		valueTypePackage = path.Dir(valueType)
-		if len(valueTypePackage) > 0 {
-			valueTypePackageShort = path.Base(valueTypePackage) + "."
-		}
-		valueType = path.Base(valueType)
 	}
 
 	if len(errors) > 0 {
@@ -154,6 +152,7 @@ func main() {
 		ReceiverName:       receiverName,
 		GetReturnsBool:     getReturnsBool,
 		LazyInstantiates:   lazyInstantiates,
+		GetDefault:         getDefault,
 	}
 
 	templates := []string{
@@ -182,13 +181,40 @@ func main() {
 		}
 	}
 
-	//formatted, err := format.Source(b.Bytes())
-	//if err != nil {
-	//	printErr("formatting error: %s", err.Error())
-	//	os.Exit(1)
-	//}
+	formatted, err := format.Source(b.Bytes())
+	if err != nil {
+		printErr("formatting error: %s", err.Error())
+		os.Exit(1)
+	}
 
 	printSuccess("struct created")
-	//printPlain(string(formatted))
-	printPlain(string(b.Bytes()))
+	printPlain(string(formatted))
+}
+
+func parsePackage(ppath string) (packageName string, typeName string, err error) {
+	if ppath == "" {
+		err = errors.New("type or package declaration was empty")
+		return
+	}
+	isPointerType := ppath[0] == '*'
+	if isPointerType {
+		ppath = ppath[1:]
+	}
+
+	pathParts := strings.Split(ppath, ".")
+	numParts := len(pathParts)
+
+	if numParts == 1 {
+		typeName = pathParts[0]
+		return
+	}
+
+	// two parts
+	packageName = strings.Join(pathParts[:numParts-1], ".")
+	typeName = path.Base(packageName) + "." + pathParts[numParts-1]
+	if isPointerType {
+		typeName = "*" + typeName
+	}
+
+	return
 }

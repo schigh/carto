@@ -12,7 +12,7 @@ func printBold(msg string, args ...interface{}) {
 
 //  print plain
 func printPlain(msg string, args ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stdout, "\033[30m"+msg+"\033[0m", args...)
+	_, _ = fmt.Fprintf(os.Stdout, msg, args...)
 }
 
 // printErr will print in red

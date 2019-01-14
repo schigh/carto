@@ -21,6 +21,7 @@ type mapTmpl struct {
 	ReceiverName          string
 	GetReturnsBool        bool
 	LazyInstantiates      bool
+	GetDefault            bool
 }
 
 const headTmpl = `// Code generated {{.GenDate}} by carto.  DO NOT EDIT.
@@ -52,13 +53,22 @@ func New{{.StructName}}() {{if .ByReference}}*{{end}}{{.StructName}} {
 `
 
 const getTmpl = `
-// Get gets the {{.ValueType}} keyed by {{.KeyType}}. {{if .GetReturnsBool}}Also returns bool value indicating whether the key exists in the map{{end}}
+{{if .GetDefault}}// Get gets the {{.ValueType}} keyed by {{.KeyType}}.  If the key does not exist, a default {{.ValueType}} will be returned
+func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Get(key {{.KeyType}}, dflt {{.ValueType}})(value {{.ValueType}}) {
+	{{if .Mutex}}{{.ReceiverName}}.RLock()
+	{{end}}		value, ok = {{.ReceiverName}}.{{.InternalMapName}}[key]{{if .Mutex}}
+	{{.ReceiverName}}.RUnlock(){{end}}
+	if !ok {
+		value = dflt
+	}
+	return
+}{{else}}// Get gets the {{.ValueType}} keyed by {{.KeyType}}. {{if .GetReturnsBool}}Also returns bool value indicating whether the key exists in the map{{end}}
 func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Get(key {{.KeyType}}) {{if .GetReturnsBool}}(value {{.ValueType}}, ok bool){{else}}(value {{.ValueType}}){{end}} {
 	{{if .Mutex}}{{.ReceiverName}}.RLock()
 	{{end}}		value{{if .GetReturnsBool}}, ok{{end}} = {{.ReceiverName}}.{{.InternalMapName}}[key]	{{if .Mutex}}
 	{{.ReceiverName}}.RUnlock(){{end}}
 	return
-}
+}{{end}}
 `
 
 const keysTmpl = `
