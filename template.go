@@ -56,7 +56,8 @@ const getTmpl = `
 {{if .GetDefault}}// Get gets the {{.ValueType}} keyed by {{.KeyType}}.  If the key does not exist, a default {{.ValueType}} will be returned
 func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Get(key {{.KeyType}}, dflt {{.ValueType}})(value {{.ValueType}}) {
 	{{if .Mutex}}{{.ReceiverName}}.RLock()
-	{{end}}		value, ok = {{.ReceiverName}}.{{.InternalMapName}}[key]{{if .Mutex}}
+	{{end}}		var ok bool
+	value, ok = {{.ReceiverName}}.{{.InternalMapName}}[key]{{if .Mutex}}
 	{{.ReceiverName}}.RUnlock(){{end}}
 	if !ok {
 		value = dflt
