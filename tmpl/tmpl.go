@@ -1,8 +1,6 @@
-package main
+package tmpl
 
-//go:generate env
-
-type mapTmpl struct {
+type MapTmpl struct {
 	GenDate               string
 	PackageName           string
 	StructName            string
@@ -24,7 +22,9 @@ type mapTmpl struct {
 	GetDefault            bool
 }
 
-const headTmpl = `// Code generated {{.GenDate}} by carto.  DO NOT EDIT.
+// HeadTmpl is the file header, including imports and struct declaration.
+// If lazy map instantiation is _not_ enabled, this also wraps the New... func.
+const HeadTmpl = `// Code generated {{.GenDate}} by carto.  DO NOT EDIT.
 package {{.PackageName}}
 {{if .Sync}}
 import (
@@ -52,7 +52,8 @@ func New{{.StructName}}() {{if .ByReference}}*{{end}}{{.StructName}} {
 {{end}}
 `
 
-const getTmpl = `
+// GetTmpl wraps the `Get` func
+const GetTmpl = `
 {{if .GetDefault}}// Get gets the {{.ValueType}} keyed by {{.KeyType}}.  If the key does not exist, a default {{.ValueType}} will be returned
 func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Get(key {{.KeyType}}, dflt {{.ValueType}})(value {{.ValueType}}) {
 	{{if .Mutex}}{{.ReceiverName}}.RLock()
@@ -72,7 +73,8 @@ func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Get(key {{.K
 }{{end}}
 `
 
-const keysTmpl = `
+// KeysTmpl wraps the `Keys` func
+const KeysTmpl = `
 // Keys will return all keys in the {{.StructName}}'s internal map
 func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Keys() (keys []{{.KeyType}}) {
 	{{if .Mutex}}{{.ReceiverName}}.RLock()
@@ -87,7 +89,8 @@ func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Keys() (keys
 }
 `
 
-const setTmpl = `
+// SetTmpl wraps the `Set` func
+const SetTmpl = `
 // Set will add an element to the {{.StructName}}'s internal map with the specified key
 func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Set(key {{.KeyType}}, value {{.ValueType}}) {
 	{{if .Mutex}}{{.ReceiverName}}.Lock()
@@ -99,7 +102,8 @@ func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Set(key {{.K
 }
 `
 
-const absorbTmpl = `
+// AbsorbTmpl wraps the `Absorb` func
+const AbsorbTmpl = `
 // Absorb will take all the keys and values from another {{.StructName}}'s internal map and
 // overwrite any existing keys
 func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Absorb(otherMap {{if .ByReference}}*{{end}}{{.StructName}}) {
@@ -116,7 +120,8 @@ func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Absorb(other
 }
 `
 
-const absorbMapTmpl = `
+// AbsorbMapTmpl wraps the `AbsorbMap` func
+const AbsorbMapTmpl = `
 // AbsorbMap will take all the keys and values from another map and overwrite any existing keys
 func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) AbsorbMap(regularMap map[{{.KeyType}}]{{.ValueType}}) {
 	{{if .Mutex}}{{.ReceiverName}}.Lock()
@@ -130,7 +135,8 @@ func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) AbsorbMap(re
 }
 `
 
-const deleteTmpl = `
+// DeleteTmpl wraps the `Delete` func
+const DeleteTmpl = `
 // Delete will remove an item from the map by key
 func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Delete(key {{.KeyType}}) {
 	{{if .Mutex}}{{.ReceiverName}}.Lock()
@@ -139,7 +145,8 @@ func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Delete(key {
 }
 `
 
-const clearTmpl = `
+// ClearTmpl wraps the `Clear` func
+const ClearTmpl = `
 // Clear will remove all elements from the map
 func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Clear() {
 	{{if .Mutex}}{{.ReceiverName}}.Lock()
