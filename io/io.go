@@ -7,7 +7,7 @@ import (
 
 //  PrintBold will print bold text
 func PrintBold(msg string, args ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stdout, "\033[34m\033[1m"+msg+"\033[0m", args...)
+	_, _ = fmt.Fprintf(os.Stderr, "\033[34m\033[1m"+msg+"\033[0m", args...)
 }
 
 //  PrintPlain will print plain text
@@ -22,10 +22,10 @@ func PrintErr(msg string, args ...interface{}) {
 
 // PrintSuccess will print success text
 func PrintSuccess(msg string, args ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stdout, "\033[32m👍 "+msg+"\033[0m\n", args...)
+	_, _ = fmt.Fprintf(os.Stderr, "\033[32m👍 "+msg+"\033[0m\n", args...)
 }
 
 // PrintInfo will print info text
 func PrintInfo(msg string, args ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stdout, "\033[36m🌐 "+msg+"\033[0m\n", args...)
+	_, _ = fmt.Fprintf(os.Stderr, "\033[36m🌐 "+msg+"\033[0m\n", args...)
 }
