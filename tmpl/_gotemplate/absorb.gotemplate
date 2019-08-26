@@ -1,0 +1,19 @@
+// Absorb will take all the keys and values from another {{.StructName}}'s internal map and
+// overwrite any existing keys
+func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Absorb(otherMap {{if .ByReference}}*{{end}}{{.StructName}}) {
+{{if .ByReference}}\\\
+	{{.ReceiverName}}.mx.Lock()
+	otherMap.mx.RLock()
+	defer otherMap.mx.RUnlock()
+	defer {{.ReceiverName}}.mx.Unlock()
+
+{{end}}\\\
+{{if .LazyInstantiates}}\\\
+	{{.ReceiverName}}.onceToken.Do(func() {
+		{{.ReceiverName}}.{{.InternalMapName}} = make(map[{{.KeyType}}]{{.ValueType}})
+	})
+{{end}}\\\
+	for k, v := range otherMap.{{.InternalMapName}} {
+		{{.ReceiverName}}.{{.InternalMapName}}[k] = v
+	}
+}

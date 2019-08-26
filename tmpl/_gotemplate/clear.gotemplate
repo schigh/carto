@@ -1,0 +1,9 @@
+// Clear will remove all elements from the map
+func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Clear() {
+{{if .ByReference}}\\\
+	{{.ReceiverName}}.mx.Lock()
+	defer {{.ReceiverName}}.mx.Unlock()
+
+{{end}}\\\
+	{{.ReceiverName}}.{{.InternalMapName}} = make(map[{{.KeyType}}]{{.ValueType}})
+}

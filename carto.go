@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"go/format"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -13,36 +14,135 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/schigh/carto/tmpl"
-
 	"github.com/schigh/carto/io"
+	"github.com/schigh/carto/tmpl"
 )
+
+var allTemplates = []string{
+	tmpl.HeadTmpl,
+	tmpl.GetTmpl,
+	tmpl.KeysTmpl,
+	tmpl.SetTmpl,
+	tmpl.AbsorbTmpl,
+	tmpl.AbsorbMapTmpl,
+	tmpl.DeleteTmpl,
+	tmpl.ClearTmpl,
+}
 
 var (
-	packageName        string
-	structName         string
-	keyType            string
-	valueType          string
-	byValue            bool
-	receiverName       string
-	getReturnsBool     bool
-	lazyInstantiates   bool
-	outFileName        string
-	internalMapName    string
-	noMutex            bool
-	isGoGenerate       bool
-	keyTypePackage     string
-	keyTypeIsPointer   bool
-	valueTypePackage   string
-	valueTypeIsPointer bool
-	getDefault         bool
+	packageName      string
+	structName       string
+	keyType          string
+	valueType        string
+	byValue          bool
+	receiverName     string
+	getReturnsBool   bool
+	lazyInstantiates bool
+	outFileName      string
+	internalMapName  string
+	keyTypePackage   string
+	valueTypePackage string
+	getDefault       bool
 
-	reserved = []string{
-		"i", "k", "v", "keys", "onceToken", "value", "ok", "otherMap",
-	}
+	version bool
+	Version string
+
+	reserved = []string{"i", "k", "v", "keys", "onceToken", "value", "ok", "otherMap", "mx"}
 )
 
-func init() {
+func usage() {
+	io.PrintBold("C A R T O\n\n")
+	io.PrintInfo("🌐 Maps made easy")
+	usg := `
+usage:
+carto -p <package> -s <structname> -k <keytype> -v <valuetype> [options]
+
+-p    (string)      Package name !
+-s    (string)      Struct name  !
+-k    (string)      Key type     !
+-v    (string)      Value type   !
+-r    (string)      Receiver name (defaults to lowercase first char of 
+                    struct name)
+-o    (string)      Output file path (if omitted, prints to STDOUT)
+-i    (string)      Variable name for internal map (defaults to internal)
+-rv   (bool)        Receivers are by value
+-b    (bool)        "Get" return signature includes a bool value indicating 
+                    if the key exists in the internal map
+-d    (bool)        "Get" signature has second parameter for default return 
+                    value when key does not exist in the internal map
+-lz   (bool)        Will lazy-instantiate the internal map when a write 
+                    operation is used
+-version            Print version and exit
+`
+	usg = strings.Replace(usg, "!", "\033[33m(required)\033[0m", -1)
+	io.PrintPlain(usg)
+}
+
+func main() {
+	if handleFlags() {
+		os.Exit(0)
+	}
+
+	packageName, structName, keyType, valueType, errList := ensureRequired(packageName, structName, keyType, valueType)
+	if len(errList) > 0 {
+		err := errors.New(strings.Join(errList, "\n"))
+		handleError(err)
+	}
+
+	keyTypePackage, keyType, err := parsePackage(keyType)
+	if err != nil {
+		handleError(err)
+	}
+
+	valueTypePackage, valueType, err := parsePackage(valueType)
+	if err != nil {
+		handleError(err)
+	}
+
+	receiverName = reservedKwds(defaultReceiver(receiverName, structName), reserved)
+	internalMapName = reservedKwds(internalMapName, reserved)
+
+	mt := tmpl.MapTmpl{
+		GenDate:          time.Now().Format(time.RFC1123),
+		PackageName:      filepath.Base(packageName),
+		StructName:       structName,
+		KeyType:          keyType,
+		KeyTypePackage:   keyTypePackage,
+		ValueType:        valueType,
+		ValueTypePackage: valueTypePackage,
+		InternalMapName:  internalMapName,
+		ByReference:      !byValue,
+		ReceiverName:     receiverName,
+		GetReturnsBool:   getReturnsBool,
+		LazyInstantiates: lazyInstantiates,
+		GetDefault:       getDefault,
+	}
+
+	b, err := parseAndExecTemplates(&mt, allTemplates)
+	if err != nil {
+		handleError(err)
+	}
+	formatted, err := applyFormatting(b.Bytes())
+	if err != nil {
+		handleError(err)
+	}
+
+	fileCreated, err := createOutFile(outFileName, formatted)
+	if err != nil {
+		handleError(err)
+	}
+	if !fileCreated {
+		io.PrintSuccess("struct created")
+		io.PrintPlain(string(formatted))
+	}
+}
+
+func handleError(err error) {
+	io.PrintErr("CARTO generate struct failed.\n%s", err.Error())
+	os.Exit(1)
+}
+
+func handleFlags() bool {
 	flag.StringVar(&packageName, "p", "", "")
 	flag.StringVar(&structName, "s", "", "")
 	flag.StringVar(&keyType, "k", "", "")
@@ -53,144 +153,104 @@ func init() {
 	flag.BoolVar(&lazyInstantiates, "lz", false, "")
 	flag.StringVar(&outFileName, "o", "", "")
 	flag.StringVar(&internalMapName, "i", "internal", "")
-	flag.BoolVar(&noMutex, "xm", false, "")
 	flag.BoolVar(&getDefault, "d", false, "")
-}
-
-func usage() {
-	io.PrintBold("C A R T O\n")
-	io.PrintInfo("Maps made easy")
-	usg := `
-usage:
--p      package name !
--s      struct name  !
--k      key type     !
--v      value type   !
--r      receiver name (defaults to lowercase first char of struct name)
--rv     receivers are by value
--b      "Get" return signature includes a bool value indicating if the key exists in the internal map
--d      "Get" signature has second parameter for default return value when key does not exist in the internal map
--lz     will lazy-instantiate the internal map when a write operation is used
--o      output file name (if omitted, prints to STDOUT)
--i      variable name for internal map (defaults to internal)
--xm     operations will not be mutexed
-`
-	usg = strings.Replace(usg, "!", "\033[33m(required)\033[0m", -1)
-	io.PrintPlain(usg)
-}
-
-func main() {
+	flag.BoolVar(&version, "version", false, "")
 	flag.Usage = usage
 	flag.Parse()
 
-	var errList []string
+	if version {
+		io.PrintInfo("CARTO version: %s", Version)
+		return true
+	}
+
+	return false
+}
+
+func ensureRequired(p, s, k, v string) (pVal, sVal, kVal, vVal string, errList []string) {
 
 	// check package
-	if packageName == "" {
-		packageName = os.Getenv("GOPACKAGE")
-		isGoGenerate = true
-	}
-	if packageName == "" {
-		errList = append(errList, "   - no package specified")
+	if p == "" {
+		errList = append(errList, "   - package is required ('-p')")
 	}
 
 	// check struct
-	if structName == "" {
-		errList = append(errList, "   - no struct specified")
+	if s == "" {
+		errList = append(errList, "   - struct name is required ('-s')")
 	}
 
 	// check key type
-	if keyType == "" {
-		errList = append(errList, "   - no key type specified")
-	} else {
-		var keyTypeErr error
-		keyTypePackage, keyType, keyTypeErr = parsePackage(keyType)
-		if keyTypeErr != nil {
-			errList = append(errList, keyTypeErr.Error())
-		}
+	if k == "" {
+		errList = append(errList, "   - key type is required ('-k')")
 	}
 
 	// check value type
-	if valueType == "" {
-		errList = append(errList, "   - no value type specified")
-	} else {
-		var valueTypeErr error
-		valueTypePackage, valueType, valueTypeErr = parsePackage(valueType)
-		if valueTypeErr != nil {
-			errList = append(errList, valueTypeErr.Error())
-		}
+	if v == "" {
+		errList = append(errList, "   - value type is required ('-v')")
 	}
 
-	if len(errList) > 0 {
-		io.PrintErr("unable to generate CARTO struct:\n" + strings.Join(errList, "\n"))
-		os.Exit(1)
-	}
+	pVal = p
+	sVal = s
+	kVal = k
+	vVal = v
 
+	return
+}
+
+func defaultReceiver(r, s string) string {
 	// default receiver name
-	if receiverName == "" {
-		receiverName = strings.ToLower(string(structName[0]))
+	if r == "" {
+		r = strings.ToLower(string(s[0]))
 	}
-	for _, r := range reserved {
-		if receiverName == r {
-			receiverName = "_" + receiverName
+
+	return r
+}
+
+func reservedKwds(r string, kwds []string) string {
+	// prefix any "reserved" keywords with an underscore
+	for _, rw := range kwds {
+		if r == rw {
+			r = "_" + r
 			break
 		}
 	}
+	return r
+}
 
-	mt := &tmpl.MapTmpl{
-		GenDate:            time.Now().Format(time.RFC1123),
-		PackageName:        filepath.Base(packageName),
-		StructName:         structName,
-		Sync:               lazyInstantiates || !noMutex,
-		Mutex:              !noMutex,
-		KeyType:            keyType,
-		KeyTypePackage:     keyTypePackage,
-		KeyTypeIsPointer:   keyTypeIsPointer,
-		ValueType:          valueType,
-		ValueTypePackage:   valueTypePackage,
-		ValueTypeIsPointer: valueTypeIsPointer,
-		InternalMapName:    internalMapName,
-		ByReference:        !byValue,
-		ReceiverName:       receiverName,
-		GetReturnsBool:     getReturnsBool,
-		LazyInstantiates:   lazyInstantiates,
-		GetDefault:         getDefault,
-	}
-
-	templates := []string{
-		tmpl.HeadTmpl,
-		tmpl.GetTmpl,
-		tmpl.KeysTmpl,
-		tmpl.SetTmpl,
-		tmpl.AbsorbTmpl,
-		tmpl.AbsorbMapTmpl,
-		tmpl.DeleteTmpl,
-		tmpl.ClearTmpl,
-	}
+func parseAndExecTemplates(sat interface{}, tmpls []string) (*bytes.Buffer, error) {
 	var buf []byte
 	b := bytes.NewBuffer(buf)
 
-	for i, tmpl := range templates {
-		t, err := template.New(fmt.Sprintf("tmpl_%d", i)).Parse(tmpl)
+	for i, tplt := range tmpls {
+		t, err := template.New(fmt.Sprintf("tmpl_%d", i)).Parse(tplt)
 		if err != nil {
-			io.PrintErr("template error: %s", err.Error())
-			os.Exit(1)
+			return nil, err
 		}
 
-		if err := t.Execute(b, mt); err != nil {
-			io.PrintErr("template execute error: %s", err.Error())
-			os.Exit(1)
+		if err := t.Execute(b, sat); err != nil {
+			return nil, err
 		}
 	}
 
-	formatted, err := format.Source(b.Bytes())
+	return b, nil
+}
+
+func applyFormatting(b []byte) ([]byte, error) {
+	data, err := format.Source(b)
 	if err != nil {
-		io.PrintErr("formatting error: %s", err.Error())
-		os.Exit(1)
+		return nil, err
 	}
+	return data, nil
+}
 
-	io.PrintSuccess("struct created")
-	io.PrintPlain(string(formatted))
+func createOutFile(fn string, data []byte) (bool, error) {
+	if fn != "" {
+		if err := ioutil.WriteFile(fn, data, 0644); err != nil {
+			return false, err
+		}
+		io.PrintSuccess("struct created")
+		return true, nil
+	}
+	return false, nil
 }
 
 func parsePackage(ppath string) (packageName string, typeName string, err error) {

@@ -27,5 +27,5 @@ func PrintSuccess(msg string, args ...interface{}) {
 
 // PrintInfo will print info text
 func PrintInfo(msg string, args ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stderr, "\033[36m🌐 "+msg+"\033[0m\n", args...)
+	_, _ = fmt.Fprintf(os.Stderr, "\033[36m"+msg+"\033[0m\n", args...)
 }

@@ -1,0 +1,16 @@
+// Keys will return all keys in the {{.StructName}}'s internal map
+func ({{.ReceiverName}} {{if .ByReference}}*{{end}}{{.StructName}}) Keys() (keys []{{.KeyType}}) {
+{{if .ByReference}}\\\
+	{{.ReceiverName}}.mx.RLock()
+	defer {{.ReceiverName}}.mx.RUnlock()
+
+{{end}}\\\
+	keys = make([]{{.KeyType}}, len({{.ReceiverName}}.{{.InternalMapName}}))
+	var i int
+	for k := range {{.ReceiverName}}.{{.InternalMapName}} {
+		keys[i] = k
+		i++
+	}
+
+	return
+}
