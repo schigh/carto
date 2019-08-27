@@ -58,6 +58,8 @@ You can install carto by using `go get`
 
 ## Examples
 
+A struct `MyMap` that wraps `map[string]*zerolog.Logger`:
+
 ```
 > carto -p foo -s MyMap -k string -v '*github.com/rs/zerolog.Logger'
 ```
@@ -165,4 +167,172 @@ func (m *MyMap) Clear() {
 </p>
 </details>
 
+The previous struct, lazy-instantiated:
 
+```
+> carto -p foo -s MyMap -k string -v '*github.com/rs/zerolog.Logger' -lz
+```
+<details>
+<summary>Generated Source</summary>
+<p>
+
+```go
+// Code generated Tue, 27 Aug 2019 10:20:05 EDT by carto.  DO NOT EDIT.
+package foo
+
+import (
+	"sync"
+
+	"github.com/rs/zerolog"
+)
+
+// MyMap wraps map[string]*zerolog.Logger, and locks reads and writes with a mutex
+type MyMap struct {
+	mx        sync.RWMutex
+	internal  map[string]*zerolog.Logger
+	onceToken sync.Once
+}
+
+// Get gets the *zerolog.Logger keyed by string.
+func (m *MyMap) Get(key string) (value *zerolog.Logger) {
+	m.mx.RLock()
+	defer m.mx.RUnlock()
+
+	value = m.internal[key]
+
+	return
+}
+
+// Keys will return all keys in the MyMap's internal map
+func (m *MyMap) Keys() (keys []string) {
+	m.mx.RLock()
+	defer m.mx.RUnlock()
+
+	keys = make([]string, len(m.internal))
+	var i int
+	for k := range m.internal {
+		keys[i] = k
+		i++
+	}
+
+	return
+}
+
+// Set will add an element to the MyMap's internal map with the specified key
+func (m *MyMap) Set(key string, value *zerolog.Logger) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+
+	m.onceToken.Do(func() {
+		m.internal = make(map[string]*zerolog.Logger)
+	})
+	m.internal[key] = value
+}
+
+// Absorb will take all the keys and values from another MyMap's internal map and
+// overwrite any existing keys
+func (m *MyMap) Absorb(otherMap *MyMap) {
+	m.mx.Lock()
+	otherMap.mx.RLock()
+	defer otherMap.mx.RUnlock()
+	defer m.mx.Unlock()
+
+	m.onceToken.Do(func() {
+		m.internal = make(map[string]*zerolog.Logger)
+	})
+	for k, v := range otherMap.internal {
+		m.internal[k] = v
+	}
+}
+
+// AbsorbMap will take all the keys and values from another map and overwrite any existing keys
+func (m *MyMap) AbsorbMap(regularMap map[string]*zerolog.Logger) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+
+	m.onceToken.Do(func() {
+		m.internal = make(map[string]*zerolog.Logger)
+	})
+	for k, v := range regularMap {
+		m.internal[k] = v
+	}
+}
+
+// Delete will remove a *zerolog.Logger from the map by key
+func (m *MyMap) Delete(key string) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+
+	m.onceToken.Do(func() {
+		m.internal = make(map[string]*zerolog.Logger)
+	})
+	delete(m.internal, key)
+}
+
+// Clear will remove all elements from the map
+func (m *MyMap) Clear() {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+
+	m.internal = make(map[string]*zerolog.Logger)
+}
+```
+
+</p>
+</details>
+
+With a default return value:
+
+```
+> carto -p foo -s MyMap -k string -v '*github.com/rs/zerolog.Logger' -d
+```
+<details>
+<summary>Generated Source (`Get` func)</summary>
+<p>
+
+```go
+...
+
+// Get gets the *zerolog.Logger keyed by string.  If the key does not exist, a default *zerolog.Logger will be returned
+func (m *MyMap) Get(key string, dflt *zerolog.Logger) (value *zerolog.Logger) {
+	m.mx.RLock()
+	defer m.mx.RUnlock()
+
+	var ok bool
+	value, ok = m.internal[key]
+	if !ok {
+		value = dflt
+	}
+
+	return
+}
+
+...
+```
+
+</p>
+</details>
+
+With a second boolean return value:
+
+```
+> carto -p foo -s MyMap -k string -v '*github.com/rs/zerolog.Logger' -b
+```
+<details>
+<summary>Generated Source (`Get` func)</summary>
+<p>
+
+```go
+// Get gets the *zerolog.Logger keyed by string. Also returns bool value indicating whether the key exists in the map
+func (m *MyMap) Get(key string) (value *zerolog.Logger, ok bool) {
+	m.mx.RLock()
+	defer m.mx.RUnlock()
+
+	value, ok = m.internal[key]
+
+	return
+}
+```
+
+</p>
+</details>
