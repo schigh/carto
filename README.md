@@ -68,7 +68,7 @@ A struct `MyMap` that wraps `map[string]*zerolog.Logger`:
 <p>
 
 ```go
-// Code generated Mon, 26 Aug 2019 19:01:42 EDT by carto.  DO NOT EDIT.
+// Code generated Tue, 27 Aug 2019 10:27:43 EDT by carto.  DO NOT EDIT.
 package foo
 
 import (
@@ -79,14 +79,14 @@ import (
 
 // MyMap wraps map[string]*zerolog.Logger, and locks reads and writes with a mutex
 type MyMap struct {
-	mx       sync.RWMutex
-	internal map[string]*zerolog.Logger
+	mx   sync.RWMutex
+	impl map[string]*zerolog.Logger
 }
 
 // NewMyMap generates a new MyMap with a non-nil map
 func NewMyMap() *MyMap {
 	m := &MyMap{}
-	m.internal = make(map[string]*zerolog.Logger)
+	m.impl = make(map[string]*zerolog.Logger)
 
 	return m
 }
@@ -96,7 +96,7 @@ func (m *MyMap) Get(key string) (value *zerolog.Logger) {
 	m.mx.RLock()
 	defer m.mx.RUnlock()
 
-	value = m.internal[key]
+	value = m.impl[key]
 
 	return
 }
@@ -106,9 +106,9 @@ func (m *MyMap) Keys() (keys []string) {
 	m.mx.RLock()
 	defer m.mx.RUnlock()
 
-	keys = make([]string, len(m.internal))
+	keys = make([]string, len(m.impl))
 	var i int
-	for k := range m.internal {
+	for k := range m.impl {
 		keys[i] = k
 		i++
 	}
@@ -121,7 +121,7 @@ func (m *MyMap) Set(key string, value *zerolog.Logger) {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
-	m.internal[key] = value
+	m.impl[key] = value
 }
 
 // Absorb will take all the keys and values from another MyMap's internal map and
@@ -132,8 +132,8 @@ func (m *MyMap) Absorb(otherMap *MyMap) {
 	defer otherMap.mx.RUnlock()
 	defer m.mx.Unlock()
 
-	for k, v := range otherMap.internal {
-		m.internal[k] = v
+	for k, v := range otherMap.impl {
+		m.impl[k] = v
 	}
 }
 
@@ -143,7 +143,7 @@ func (m *MyMap) AbsorbMap(regularMap map[string]*zerolog.Logger) {
 	defer m.mx.Unlock()
 
 	for k, v := range regularMap {
-		m.internal[k] = v
+		m.impl[k] = v
 	}
 }
 
@@ -152,7 +152,7 @@ func (m *MyMap) Delete(key string) {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
-	delete(m.internal, key)
+	delete(m.impl, key)
 }
 
 // Clear will remove all elements from the map
@@ -160,7 +160,7 @@ func (m *MyMap) Clear() {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
-	m.internal = make(map[string]*zerolog.Logger)
+	m.impl = make(map[string]*zerolog.Logger)
 }
 ```
 
@@ -177,7 +177,7 @@ The previous struct, lazy-instantiated:
 <p>
 
 ```go
-// Code generated Tue, 27 Aug 2019 10:20:05 EDT by carto.  DO NOT EDIT.
+// Code generated Tue, 27 Aug 2019 10:28:46 EDT by carto.  DO NOT EDIT.
 package foo
 
 import (
@@ -189,7 +189,7 @@ import (
 // MyMap wraps map[string]*zerolog.Logger, and locks reads and writes with a mutex
 type MyMap struct {
 	mx        sync.RWMutex
-	internal  map[string]*zerolog.Logger
+	impl      map[string]*zerolog.Logger
 	onceToken sync.Once
 }
 
@@ -198,7 +198,7 @@ func (m *MyMap) Get(key string) (value *zerolog.Logger) {
 	m.mx.RLock()
 	defer m.mx.RUnlock()
 
-	value = m.internal[key]
+	value = m.impl[key]
 
 	return
 }
@@ -208,9 +208,9 @@ func (m *MyMap) Keys() (keys []string) {
 	m.mx.RLock()
 	defer m.mx.RUnlock()
 
-	keys = make([]string, len(m.internal))
+	keys = make([]string, len(m.impl))
 	var i int
-	for k := range m.internal {
+	for k := range m.impl {
 		keys[i] = k
 		i++
 	}
@@ -224,9 +224,9 @@ func (m *MyMap) Set(key string, value *zerolog.Logger) {
 	defer m.mx.Unlock()
 
 	m.onceToken.Do(func() {
-		m.internal = make(map[string]*zerolog.Logger)
+		m.impl = make(map[string]*zerolog.Logger)
 	})
-	m.internal[key] = value
+	m.impl[key] = value
 }
 
 // Absorb will take all the keys and values from another MyMap's internal map and
@@ -238,10 +238,10 @@ func (m *MyMap) Absorb(otherMap *MyMap) {
 	defer m.mx.Unlock()
 
 	m.onceToken.Do(func() {
-		m.internal = make(map[string]*zerolog.Logger)
+		m.impl = make(map[string]*zerolog.Logger)
 	})
-	for k, v := range otherMap.internal {
-		m.internal[k] = v
+	for k, v := range otherMap.impl {
+		m.impl[k] = v
 	}
 }
 
@@ -251,10 +251,10 @@ func (m *MyMap) AbsorbMap(regularMap map[string]*zerolog.Logger) {
 	defer m.mx.Unlock()
 
 	m.onceToken.Do(func() {
-		m.internal = make(map[string]*zerolog.Logger)
+		m.impl = make(map[string]*zerolog.Logger)
 	})
 	for k, v := range regularMap {
-		m.internal[k] = v
+		m.impl[k] = v
 	}
 }
 
@@ -264,9 +264,9 @@ func (m *MyMap) Delete(key string) {
 	defer m.mx.Unlock()
 
 	m.onceToken.Do(func() {
-		m.internal = make(map[string]*zerolog.Logger)
+		m.impl = make(map[string]*zerolog.Logger)
 	})
-	delete(m.internal, key)
+	delete(m.impl, key)
 }
 
 // Clear will remove all elements from the map
@@ -274,7 +274,7 @@ func (m *MyMap) Clear() {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 
-	m.internal = make(map[string]*zerolog.Logger)
+	m.impl = make(map[string]*zerolog.Logger)
 }
 ```
 
@@ -293,13 +293,13 @@ With a default return value:
 ```go
 ...
 
-// Get gets the *zerolog.Logger keyed by string.  If the key does not exist, a default *zerolog.Logger will be returned
+// Get gets the *zerolog.Logger keyed by string.  If the key does not exist, a default // Get gets the *zerolog.Logger keyed by string.  If the key does not exist, a default *zerolog.Logger will be returned
 func (m *MyMap) Get(key string, dflt *zerolog.Logger) (value *zerolog.Logger) {
 	m.mx.RLock()
 	defer m.mx.RUnlock()
 
 	var ok bool
-	value, ok = m.internal[key]
+	value, ok = m.impl[key]
 	if !ok {
 		value = dflt
 	}
@@ -323,15 +323,19 @@ With a second boolean return value:
 <p>
 
 ```go
+...
+
 // Get gets the *zerolog.Logger keyed by string. Also returns bool value indicating whether the key exists in the map
 func (m *MyMap) Get(key string) (value *zerolog.Logger, ok bool) {
 	m.mx.RLock()
 	defer m.mx.RUnlock()
 
-	value, ok = m.internal[key]
+	value, ok = m.impl[key]
 
 	return
 }
+
+...
 ```
 
 </p>
