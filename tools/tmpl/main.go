@@ -76,7 +76,7 @@ func main() {
 	}
 
 	var b bytes.Buffer
-	t, err := template.New("tmpl_main").Parse(string(tmplBytes))
+	t, err := template.New("tmpl_main").Parse(tmplBytes)
 	if err != nil {
 		log.Fatal(err)
 	}

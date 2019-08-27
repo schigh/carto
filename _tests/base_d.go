@@ -1,4 +1,4 @@
-// Code generated Mon, 26 Aug 2019 13:49:26 EDT by carto.  DO NOT EDIT.
+// Code generated Mon, 26 Aug 2019 18:48:56 EDT by carto.  DO NOT EDIT.
 package cartotests
 
 import (
@@ -7,14 +7,14 @@ import (
 
 // Base0D wraps map[string]interface{}, and locks reads and writes with a mutex
 type Base0D struct {
-	mx       sync.RWMutex
-	internal map[string]interface{}
+	mx   sync.RWMutex
+	impl map[string]interface{}
 }
 
 // NewBase0D generates a new Base0D with a non-nil map
 func NewBase0D() *Base0D {
 	b := &Base0D{}
-	b.internal = make(map[string]interface{})
+	b.impl = make(map[string]interface{})
 
 	return b
 }
@@ -25,7 +25,7 @@ func (b *Base0D) Get(key string, dflt interface{}) (value interface{}) {
 	defer b.mx.RUnlock()
 
 	var ok bool
-	value, ok = b.internal[key]
+	value, ok = b.impl[key]
 	if !ok {
 		value = dflt
 	}
@@ -38,9 +38,9 @@ func (b *Base0D) Keys() (keys []string) {
 	b.mx.RLock()
 	defer b.mx.RUnlock()
 
-	keys = make([]string, len(b.internal))
+	keys = make([]string, len(b.impl))
 	var i int
-	for k := range b.internal {
+	for k := range b.impl {
 		keys[i] = k
 		i++
 	}
@@ -53,7 +53,7 @@ func (b *Base0D) Set(key string, value interface{}) {
 	b.mx.Lock()
 	defer b.mx.Unlock()
 
-	b.internal[key] = value
+	b.impl[key] = value
 }
 
 // Absorb will take all the keys and values from another Base0D's internal map and
@@ -64,8 +64,8 @@ func (b *Base0D) Absorb(otherMap *Base0D) {
 	defer otherMap.mx.RUnlock()
 	defer b.mx.Unlock()
 
-	for k, v := range otherMap.internal {
-		b.internal[k] = v
+	for k, v := range otherMap.impl {
+		b.impl[k] = v
 	}
 }
 
@@ -75,7 +75,7 @@ func (b *Base0D) AbsorbMap(regularMap map[string]interface{}) {
 	defer b.mx.Unlock()
 
 	for k, v := range regularMap {
-		b.internal[k] = v
+		b.impl[k] = v
 	}
 }
 
@@ -84,7 +84,7 @@ func (b *Base0D) Delete(key string) {
 	b.mx.Lock()
 	defer b.mx.Unlock()
 
-	delete(b.internal, key)
+	delete(b.impl, key)
 }
 
 // Clear will remove all elements from the map
@@ -92,5 +92,5 @@ func (b *Base0D) Clear() {
 	b.mx.Lock()
 	defer b.mx.Unlock()
 
-	b.internal = make(map[string]interface{})
+	b.impl = make(map[string]interface{})
 }

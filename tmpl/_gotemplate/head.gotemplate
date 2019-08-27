@@ -1,9 +1,8 @@
 // Code generated {{.GenDate}} by carto.  DO NOT EDIT.
 package {{.PackageName}}
 import (
-{{if or .ByReference .LazyInstantiates}}\\\
 	"sync"
-{{end}}\\\
+
 {{if .KeyTypePackage}}\\\
 	"{{.KeyTypePackage}}"
 {{end}}\\\
@@ -12,12 +11,10 @@ import (
 {{end}}\\\
 )
 
-// {{.StructName}} wraps map[{{.KeyType}}]{{.ValueType}}{{if .ByReference}}, and locks reads and writes with a mutex{{end}}
+// {{.StructName}} wraps map[{{.KeyType}}]{{.ValueType}}, and locks reads and writes with a mutex
 type {{.StructName}} struct {
-{{if .ByReference}}\\\
 	mx sync.RWMutex
-{{end}}\\\
-	{{.InternalMapName}} map[{{.KeyType}}]{{.ValueType}}
+	impl map[{{.KeyType}}]{{.ValueType}}
 {{if .LazyInstantiates}}\\\
 	onceToken sync.Once
 {{end}}
@@ -25,9 +22,9 @@ type {{.StructName}} struct {
 {{if .LazyInstantiates}}{{else}}\\\
 
 // New{{.StructName}} generates a new {{.StructName}} with a non-nil map
-func New{{.StructName}}() {{if .ByReference}}*{{end}}{{.StructName}} {
-	{{.ReceiverName}} := {{if .ByReference}}&{{end}}{{.StructName}}{}
-	{{.ReceiverName}}.{{.InternalMapName}} = make(map[{{.KeyType}}]{{.ValueType}})
+func New{{.StructName}}() *{{.StructName}} {
+	{{.ReceiverName}} := &{{.StructName}}{}
+	{{.ReceiverName}}.impl = make(map[{{.KeyType}}]{{.ValueType}})
 
 	return {{.ReceiverName}}
 }

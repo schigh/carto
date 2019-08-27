@@ -34,20 +34,16 @@ var (
 	structName       string
 	keyType          string
 	valueType        string
-	byValue          bool
 	receiverName     string
 	getReturnsBool   bool
 	lazyInstantiates bool
 	outFileName      string
-	internalMapName  string
-	keyTypePackage   string
-	valueTypePackage string
 	getDefault       bool
 
 	version bool
-	Version string
+	Version = "0.0.1"
 
-	reserved = []string{"i", "k", "v", "keys", "onceToken", "value", "ok", "otherMap", "mx"}
+	reserved = []string{"i", "k", "v", "keys", "onceToken", "value", "ok", "otherMap", "mx", "impl"}
 )
 
 func usage() {
@@ -64,8 +60,6 @@ carto -p <package> -s <structname> -k <keytype> -v <valuetype> [options]
 -r    (string)      Receiver name (defaults to lowercase first char of 
                     struct name)
 -o    (string)      Output file path (if omitted, prints to STDOUT)
--i    (string)      Variable name for internal map (defaults to internal)
--rv   (bool)        Receivers are by value
 -b    (bool)        "Get" return signature includes a bool value indicating 
                     if the key exists in the internal map
 -d    (bool)        "Get" signature has second parameter for default return 
@@ -100,7 +94,6 @@ func main() {
 	}
 
 	receiverName = reservedKwds(defaultReceiver(receiverName, structName), reserved)
-	internalMapName = reservedKwds(internalMapName, reserved)
 
 	mt := tmpl.MapTmpl{
 		GenDate:          time.Now().Format(time.RFC1123),
@@ -110,8 +103,6 @@ func main() {
 		KeyTypePackage:   keyTypePackage,
 		ValueType:        valueType,
 		ValueTypePackage: valueTypePackage,
-		InternalMapName:  internalMapName,
-		ByReference:      !byValue,
 		ReceiverName:     receiverName,
 		GetReturnsBool:   getReturnsBool,
 		LazyInstantiates: lazyInstantiates,
@@ -148,11 +139,9 @@ func handleFlags() bool {
 	flag.StringVar(&keyType, "k", "", "")
 	flag.StringVar(&valueType, "v", "", "")
 	flag.StringVar(&receiverName, "r", "", "")
-	flag.BoolVar(&byValue, "rv", false, "")
 	flag.BoolVar(&getReturnsBool, "b", false, "")
 	flag.BoolVar(&lazyInstantiates, "lz", false, "")
 	flag.StringVar(&outFileName, "o", "", "")
-	flag.StringVar(&internalMapName, "i", "internal", "")
 	flag.BoolVar(&getDefault, "d", false, "")
 	flag.BoolVar(&version, "version", false, "")
 	flag.Usage = usage
@@ -166,7 +155,7 @@ func handleFlags() bool {
 	return false
 }
 
-func ensureRequired(p, s, k, v string) (pVal, sVal, kVal, vVal string, errList []string) {
+func ensureRequired(p, s, k, v string) (pkgVal, structVal, keyVal, valVal string, errList []string) {
 
 	// check package
 	if p == "" {
@@ -188,10 +177,10 @@ func ensureRequired(p, s, k, v string) (pVal, sVal, kVal, vVal string, errList [
 		errList = append(errList, "   - value type is required ('-v')")
 	}
 
-	pVal = p
-	sVal = s
-	kVal = k
-	vVal = v
+	pkgVal = p
+	structVal = s
+	keyVal = k
+	valVal = v
 
 	return
 }

@@ -1,4 +1,4 @@
-// Code generated Mon, 26 Aug 2019 13:49:26 EDT by carto.  DO NOT EDIT.
+// Code generated Mon, 26 Aug 2019 18:48:56 EDT by carto.  DO NOT EDIT.
 package cartotests
 
 import (
@@ -8,7 +8,7 @@ import (
 // Base0LZ0B wraps map[string]interface{}, and locks reads and writes with a mutex
 type Base0LZ0B struct {
 	mx        sync.RWMutex
-	internal  map[string]interface{}
+	impl      map[string]interface{}
 	onceToken sync.Once
 }
 
@@ -17,7 +17,7 @@ func (b *Base0LZ0B) Get(key string) (value interface{}, ok bool) {
 	b.mx.RLock()
 	defer b.mx.RUnlock()
 
-	value, ok = b.internal[key]
+	value, ok = b.impl[key]
 
 	return
 }
@@ -27,9 +27,9 @@ func (b *Base0LZ0B) Keys() (keys []string) {
 	b.mx.RLock()
 	defer b.mx.RUnlock()
 
-	keys = make([]string, len(b.internal))
+	keys = make([]string, len(b.impl))
 	var i int
-	for k := range b.internal {
+	for k := range b.impl {
 		keys[i] = k
 		i++
 	}
@@ -43,9 +43,9 @@ func (b *Base0LZ0B) Set(key string, value interface{}) {
 	defer b.mx.Unlock()
 
 	b.onceToken.Do(func() {
-		b.internal = make(map[string]interface{})
+		b.impl = make(map[string]interface{})
 	})
-	b.internal[key] = value
+	b.impl[key] = value
 }
 
 // Absorb will take all the keys and values from another Base0LZ0B's internal map and
@@ -57,10 +57,10 @@ func (b *Base0LZ0B) Absorb(otherMap *Base0LZ0B) {
 	defer b.mx.Unlock()
 
 	b.onceToken.Do(func() {
-		b.internal = make(map[string]interface{})
+		b.impl = make(map[string]interface{})
 	})
-	for k, v := range otherMap.internal {
-		b.internal[k] = v
+	for k, v := range otherMap.impl {
+		b.impl[k] = v
 	}
 }
 
@@ -70,10 +70,10 @@ func (b *Base0LZ0B) AbsorbMap(regularMap map[string]interface{}) {
 	defer b.mx.Unlock()
 
 	b.onceToken.Do(func() {
-		b.internal = make(map[string]interface{})
+		b.impl = make(map[string]interface{})
 	})
 	for k, v := range regularMap {
-		b.internal[k] = v
+		b.impl[k] = v
 	}
 }
 
@@ -83,9 +83,9 @@ func (b *Base0LZ0B) Delete(key string) {
 	defer b.mx.Unlock()
 
 	b.onceToken.Do(func() {
-		b.internal = make(map[string]interface{})
+		b.impl = make(map[string]interface{})
 	})
-	delete(b.internal, key)
+	delete(b.impl, key)
 }
 
 // Clear will remove all elements from the map
@@ -93,5 +93,5 @@ func (b *Base0LZ0B) Clear() {
 	b.mx.Lock()
 	defer b.mx.Unlock()
 
-	b.internal = make(map[string]interface{})
+	b.impl = make(map[string]interface{})
 }

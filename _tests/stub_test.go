@@ -27,7 +27,6 @@ type cartoTest struct {
 	gImpl    getter
 	gdImpl   getterDefault
 	gbImpl   getterBool
-	byValue  bool
 	lazy     bool
 	def      bool
 	retB     bool
@@ -35,7 +34,6 @@ type cartoTest struct {
 
 const (
 	isBase int = 1 << iota
-	isRV
 	isLZ
 	isD
 	isB
@@ -47,9 +45,6 @@ func newCartoTest(t *testing.T, data map[string]interface{}, attrs ...string) *c
 	test := &cartoTest{}
 	for _, a := range attrs {
 		switch a {
-		case "RV":
-			test.byValue = true
-			tMask |= isRV
 		case "LZ":
 			test.lazy = true
 			tMask |= isLZ
@@ -66,39 +61,27 @@ func newCartoTest(t *testing.T, data map[string]interface{}, attrs ...string) *c
 	}
 	switch tMask {
 	case isBase:
-		impl := &Base{internal: data}
-		test.baseImpl = impl
-		test.gImpl = impl
-	case isRV:
-		impl := Base0RV{internal: data}
+		impl := &Base{impl: data}
 		test.baseImpl = impl
 		test.gImpl = impl
 	case isLZ:
-		impl := &Base0LZ{internal: data}
+		impl := &Base0LZ{impl: data}
 		test.baseImpl = impl
 		test.gImpl = impl
 	case isD:
-		impl := &Base0D{internal: data}
+		impl := &Base0D{impl: data}
 		test.baseImpl = impl
 		test.gdImpl = impl
 	case isB:
-		impl := &Base0B{internal: data}
+		impl := &Base0B{impl: data}
 		test.baseImpl = impl
 		test.gbImpl = impl
 	case isLZ | isD:
-		impl := &Base0LZ0D{internal: data}
+		impl := &Base0LZ0D{impl: data}
 		test.baseImpl = impl
 		test.gdImpl = impl
 	case isLZ | isB:
-		impl := &Base0LZ0B{internal: data}
-		test.baseImpl = impl
-		test.gbImpl = impl
-	case isRV | isD:
-		impl := Base0RV0D{internal: data}
-		test.baseImpl = impl
-		test.gdImpl = impl
-	case isRV | isB:
-		impl := Base0RV0B{internal: data}
+		impl := &Base0LZ0B{impl: data}
 		test.baseImpl = impl
 		test.gbImpl = impl
 	default:

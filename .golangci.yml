@@ -1,0 +1,78 @@
+# configuration: https://github.com/golangci/golangci-lint
+run:
+  tests: false
+  skip-dirs:
+    - sandbox
+  linters-settings:
+    errcheck:
+      check-blank: true
+    govet:
+      check-shadowing: true
+      settings:
+        printf:
+          funcs:
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes: github.com/schigh/carto
+    gocyclo:
+      min-complexity: 15
+    maligned:
+      suggest-new: true
+    dupl:
+      threshold: 100
+    gocritic: # https://go-critic.github.io/overview#checks-overview
+      enabled-checks:
+        - appendAssign
+        - appendCombine
+        - argOrder
+        - assignOp
+        - badCond
+        - boolExprSimplify
+        - builtinShadow
+        - caseOrder
+        - commentFormatting
+        - commentedOutCode
+        - commentedOutImport
+        - defaultCaseOrder
+        - deprecatedComment
+        - docStub
+        - dupArg
+        - dupSubExpr
+        - emptyFallthrough
+        - emptyStringTest
+        - equalFold
+        - exitAfterDefer
+        - hugeParam
+        - ifElseChain
+        - indexAlloc
+        - nestingReduce
+        - nilValReturn
+        - paramTypeCombine
+        - ptrToRefParam
+        - rangeExprCopy
+        - rangeValCopy
+        - singleCaseSwitch
+        - sloppyReassign
+        - typeSwitchVar
+        - typeUnparen
+        - underef
+        - unslice
+
+linters:
+  fast: true
+  enable-all: true
+  enable:
+    - goconst
+  disable:
+    - gochecknoglobals
+
+issues:
+  exclude-rules:
+    - text: "which can be annoying to use" # complaint about unexported types
+      linters:
+        - golint

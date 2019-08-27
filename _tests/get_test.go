@@ -30,21 +30,6 @@ func TestGet(t *testing.T) {
 			expect: 42,
 		},
 		{
-			name:     "by value with nil map",
-			testArgs: []string{"RV"},
-			key:      "foo",
-			expect:   nil,
-		},
-		{
-			name:     "by value with value",
-			testArgs: []string{"RV"},
-			internal: map[string]interface{}{
-				"foo": 42,
-			},
-			key:    "foo",
-			expect: 42,
-		},
-		{
 			name:     "lazy with nil map",
 			testArgs: []string{"LZ"},
 			key:      "foo",
@@ -120,40 +105,6 @@ func TestGet(t *testing.T) {
 		{
 			name:     "LZB with value",
 			testArgs: []string{"LZ", "B"},
-			internal: map[string]interface{}{
-				"foo": 42,
-			},
-			key:    "foo",
-			expect: 42,
-			rBool:  true,
-		},
-		{
-			name:     "RVD with nil map",
-			testArgs: []string{"RV", "D"},
-			dflt:     "bar",
-			key:      "foo",
-			expect:   "bar",
-		},
-		{
-			name:     "RVD with value",
-			testArgs: []string{"RV", "D"},
-			dflt:     "bar",
-			internal: map[string]interface{}{
-				"foo": 42,
-			},
-			key:    "foo",
-			expect: 42,
-		},
-		{
-			name:     "RVB with nil map",
-			testArgs: []string{"RV", "B"},
-			key:      "foo",
-			expect:   nil,
-			rBool:    false,
-		},
-		{
-			name:     "RVB with value",
-			testArgs: []string{"RV", "B"},
 			internal: map[string]interface{}{
 				"foo": 42,
 			},
