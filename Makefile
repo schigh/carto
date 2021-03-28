@@ -57,17 +57,17 @@ templates:  ## generate templates
 	@goimports -w -local github.com/schigh/carto .
 
 .PHONY: test_carto
-test_carto: build lint ## test carto main
+test_carto: build ## test carto main
 	@echo "${_YELLOW}testing carto main...${_NC}"
 	@go test -race -v -cover github.com/schigh/carto
 
 .PHONY: test_gen
-test_gen: tests lint ## test carto-generated code
+test_gen: tests ## test carto-generated code
 	@echo "${_YELLOW}testing carto generated structs...${_NC}"
 	@go test -race -v -cover github.com/schigh/carto/_tests
 
 .PHONY: tests
-tests: templates ## make tests for generated code
+tests: templates build ## make tests for generated code
 	@echo "${_YELLOW}generating test structs...${_NC}"
 	@go run tools/tests/main.go
 

@@ -38,6 +38,11 @@ You can install carto by using `go get`
 > go get -u github.com/schigh/carto
 ```
 
+```
+> carto -version
+> CARTO version: 0.0.1
+```
+
 ## Options
 
 * `p` (string, required) - The package of the generated struct
@@ -287,7 +292,7 @@ With a default return value:
 > carto -p foo -s MyMap -k string -v '*github.com/rs/zerolog.Logger' -d
 ```
 <details>
-<summary>Generated Source (`Get` func)</summary>
+<summary>Generated Source (<code>Get</code> func)</summary>
 <p>
 
 ```go
@@ -319,7 +324,7 @@ With a second boolean return value:
 > carto -p foo -s MyMap -k string -v '*github.com/rs/zerolog.Logger' -b
 ```
 <details>
-<summary>Generated Source (`Get` func)</summary>
+<summary>Generated Source (<code>Get</code> func)</summary>
 <p>
 
 ```go
@@ -340,3 +345,5 @@ func (m *MyMap) Get(key string) (value *zerolog.Logger, ok bool) {
 
 </p>
 </details>
+
+## Key and Value Syntax

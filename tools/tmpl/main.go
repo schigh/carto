@@ -38,7 +38,7 @@ type tmplTemplate struct {
 
 func getFileStr(pwd, filename string) string {
 	re := regexp.MustCompile(`(?m)\\\\\\\n`)
-	filename = path.Join(pwd, "tmpl", "_gotemplate", filename) + ".gotemplate"
+	filename = path.Join(pwd, "tmpl", "_gotemplate", filename) + ".go.tpl"
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
