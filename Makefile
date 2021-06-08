@@ -3,7 +3,7 @@ _YELLOW	      =\033[0;33m
 _NC           =\033[0m
 PKG_DIRS      = $(shell go list -f '{{.Dir}}' ./...)
 NOW           := $(shell date -u '+%Y%m%d_%I:%M:%S')
-VERSION       = 0.0.1
+VERSION       = 0.0.2
 
 .PHONY: help
 help: ## prints this help
