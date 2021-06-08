@@ -41,7 +41,7 @@ var (
 	getDefault       bool
 
 	version bool
-	Version = "0.0.1"
+	Version = "2021-06-08"
 
 	reserved = []string{"i", "k", "v", "keys", "onceToken", "value", "ok", "otherMap", "mx", "impl"}
 )

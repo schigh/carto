@@ -9,17 +9,17 @@ The templates are maintained there for greater readability.
 
 // MapTmpl contains all the necessary data to generate a carto map
 type MapTmpl struct {
-	GenDate               string
-	PackageName           string
-	StructName            string
-	KeyTypePackage        string
-	KeyType               string
-	ValueType             string
-	ValueTypePackage      string
-	ReceiverName          string
-	GetReturnsBool        bool
-	LazyInstantiates      bool
-	GetDefault            bool
+	GenDate          string
+	PackageName      string
+	StructName       string
+	KeyTypePackage   string
+	KeyType          string
+	ValueType        string
+	ValueTypePackage string
+	ReceiverName     string
+	GetReturnsBool   bool
+	LazyInstantiates bool
+	GetDefault       bool
 }
 
 // HeadTmpl is the file header, including imports and struct declaration.
