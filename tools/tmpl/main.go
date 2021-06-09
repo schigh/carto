@@ -34,6 +34,8 @@ type tmplTemplate struct {
 	AbsorbMapTmpl string
 	DeleteTmpl    string
 	ClearTmpl     string
+	ValueTmpl     string
+	SizeTmpl      string
 }
 
 func getFileStr(pwd, filename string) string {
@@ -62,6 +64,8 @@ func main() {
 	deleteBytes := getFileStr(pwd, "delete")
 	clearBytes := getFileStr(pwd, "clear")
 	tmplBytes := getFileStr(pwd, "tmpl")
+	valueBytes := getFileStr(pwd, "value")
+	sizeBytes := getFileStr(pwd, "size")
 
 	tmpl := tmplTemplate{
 		GenDate:       time.Now().Format(time.RFC1123),
@@ -73,6 +77,8 @@ func main() {
 		AbsorbMapTmpl: absorbMapBytes,
 		DeleteTmpl:    deleteBytes,
 		ClearTmpl:     clearBytes,
+		ValueTmpl:     valueBytes,
+		SizeTmpl:      sizeBytes,
 	}
 
 	var b bytes.Buffer

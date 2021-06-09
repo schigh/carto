@@ -1,7 +1,7 @@
 // Delete will remove a {{.ValueType}} from the map by key
 func ({{.ReceiverName}} *{{.StructName}}) Delete(key {{.KeyType}}) {
+defer {{.ReceiverName}}.mx.Unlock()
 	{{.ReceiverName}}.mx.Lock()
-	defer {{.ReceiverName}}.mx.Unlock()
 
 {{if .LazyInstantiates}}\\\
     {{.ReceiverName}}.onceToken.Do(func() {

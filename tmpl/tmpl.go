@@ -9,17 +9,17 @@ The templates are maintained there for greater readability.
 
 // MapTmpl contains all the necessary data to generate a carto map
 type MapTmpl struct {
-	GenDate          string
-	PackageName      string
-	StructName       string
-	KeyTypePackage   string
-	KeyType          string
-	ValueType        string
-	ValueTypePackage string
-	ReceiverName     string
-	GetReturnsBool   bool
-	LazyInstantiates bool
-	GetDefault       bool
+	GenDate               string
+	PackageName           string
+	StructName            string
+	KeyTypePackage        string
+	KeyType               string
+	ValueType             string
+	ValueTypePackage      string
+	ReceiverName          string
+	GetReturnsBool        bool
+	LazyInstantiates      bool
+	GetDefault            bool
 }
 
 // HeadTmpl is the file header, including imports and struct declaration.
@@ -53,8 +53,8 @@ func New{{.StructName}}() *{{.StructName}} {
 // GetTmpl wraps the `Get` func
 const GetTmpl = `{{if .GetDefault}}// Get gets the {{.ValueType}} keyed by {{.KeyType}}.  If the key does not exist, a default {{.ValueType}} will be returned
 func ({{.ReceiverName}} *{{.StructName}}) Get(key {{.KeyType}}, dflt {{.ValueType}})(value {{.ValueType}}) {
-	{{.ReceiverName}}.mx.RLock()
-	defer {{.ReceiverName}}.mx.RUnlock()
+defer {{.ReceiverName}}.mx.RUnlock()
+    {{.ReceiverName}}.mx.RLock()
 
 	var ok bool
 	value, ok = {{.ReceiverName}}.impl[key]
@@ -66,8 +66,8 @@ func ({{.ReceiverName}} *{{.StructName}}) Get(key {{.KeyType}}, dflt {{.ValueTyp
 }
 {{else}}// Get gets the {{.ValueType}} keyed by {{.KeyType}}. {{if .GetReturnsBool}}Also returns bool value indicating whether the key exists in the map{{end}}
 func ({{.ReceiverName}} *{{.StructName}}) Get(key {{.KeyType}}) {{if .GetReturnsBool}}(value {{.ValueType}}, ok bool){{else}}(value {{.ValueType}}){{end}} {
-	{{.ReceiverName}}.mx.RLock()
 	defer {{.ReceiverName}}.mx.RUnlock()
+    {{.ReceiverName}}.mx.RLock()
 
 	value{{if .GetReturnsBool}}, ok{{end}} = {{.ReceiverName}}.impl[key]
 
@@ -78,8 +78,8 @@ func ({{.ReceiverName}} *{{.StructName}}) Get(key {{.KeyType}}) {{if .GetReturns
 // KeysTmpl wraps the `Keys` func
 const KeysTmpl = `// Keys will return all keys in the {{.StructName}}'s internal map
 func ({{.ReceiverName}} *{{.StructName}}) Keys() (keys []{{.KeyType}}) {
+defer {{.ReceiverName}}.mx.RUnlock()
 	{{.ReceiverName}}.mx.RLock()
-	defer {{.ReceiverName}}.mx.RUnlock()
 
 	keys = make([]{{.KeyType}}, len({{.ReceiverName}}.impl))
 	var i int
@@ -95,8 +95,8 @@ func ({{.ReceiverName}} *{{.StructName}}) Keys() (keys []{{.KeyType}}) {
 // SetTmpl wraps the `Set` func
 const SetTmpl = `// Set will add an element to the {{.StructName}}'s internal map with the specified key
 func ({{.ReceiverName}} *{{.StructName}}) Set(key {{.KeyType}}, value {{.ValueType}}) {
+defer {{.ReceiverName}}.mx.Unlock()
 	{{.ReceiverName}}.mx.Lock()
-	defer {{.ReceiverName}}.mx.Unlock()
 
 {{if .LazyInstantiates}}	{{.ReceiverName}}.onceToken.Do(func() {
 		{{.ReceiverName}}.impl = make(map[{{.KeyType}}]{{.ValueType}})
@@ -109,10 +109,10 @@ func ({{.ReceiverName}} *{{.StructName}}) Set(key {{.KeyType}}, value {{.ValueTy
 const AbsorbTmpl = `// Absorb will take all the keys and values from another {{.StructName}}'s internal map and
 // overwrite any existing keys
 func ({{.ReceiverName}} *{{.StructName}}) Absorb(otherMap *{{.StructName}}) {
-	{{.ReceiverName}}.mx.Lock()
-	otherMap.mx.RLock()
 	defer otherMap.mx.RUnlock()
 	defer {{.ReceiverName}}.mx.Unlock()
+{{.ReceiverName}}.mx.Lock()
+otherMap.mx.RLock()
 
 {{if .LazyInstantiates}}	{{.ReceiverName}}.onceToken.Do(func() {
 		{{.ReceiverName}}.impl = make(map[{{.KeyType}}]{{.ValueType}})
@@ -126,8 +126,8 @@ func ({{.ReceiverName}} *{{.StructName}}) Absorb(otherMap *{{.StructName}}) {
 // AbsorbMapTmpl wraps the `AbsorbMap` func
 const AbsorbMapTmpl = `// AbsorbMap will take all the keys and values from another map and overwrite any existing keys
 func ({{.ReceiverName}} *{{.StructName}}) AbsorbMap(regularMap map[{{.KeyType}}]{{.ValueType}}) {
+defer {{.ReceiverName}}.mx.Unlock()
 	{{.ReceiverName}}.mx.Lock()
-    defer {{.ReceiverName}}.mx.Unlock()
 
 {{if .LazyInstantiates}}	{{.ReceiverName}}.onceToken.Do(func() {
 		{{.ReceiverName}}.impl = make(map[{{.KeyType}}]{{.ValueType}})
@@ -141,8 +141,8 @@ func ({{.ReceiverName}} *{{.StructName}}) AbsorbMap(regularMap map[{{.KeyType}}]
 // DeleteTmpl wraps the `Delete` func
 const DeleteTmpl = `// Delete will remove a {{.ValueType}} from the map by key
 func ({{.ReceiverName}} *{{.StructName}}) Delete(key {{.KeyType}}) {
+defer {{.ReceiverName}}.mx.Unlock()
 	{{.ReceiverName}}.mx.Lock()
-	defer {{.ReceiverName}}.mx.Unlock()
 
 {{if .LazyInstantiates}}    {{.ReceiverName}}.onceToken.Do(func() {
     	{{.ReceiverName}}.impl = make(map[{{.KeyType}}]{{.ValueType}})
@@ -154,9 +154,34 @@ func ({{.ReceiverName}} *{{.StructName}}) Delete(key {{.KeyType}}) {
 // ClearTmpl wraps the `Clear` func
 const ClearTmpl = `// Clear will remove all elements from the map
 func ({{.ReceiverName}} *{{.StructName}}) Clear() {
+defer {{.ReceiverName}}.mx.Unlock()
 	{{.ReceiverName}}.mx.Lock()
-	defer {{.ReceiverName}}.mx.Unlock()
 
 	{{.ReceiverName}}.impl = make(map[{{.KeyType}}]{{.ValueType}})
+}
+`
+
+// ValueTmpl wraps the `Value` func
+const ValueTmpl = `// Value returns a copy of the underlying map[{{.KeyType}}]{{.ValueType}}
+func ({{.ReceiverName}} *{{.StructName}}) Value() map[{{.KeyType}}]{{.ValueType}} {
+	{{.ReceiverName}}.mx.RLock()
+	defer {{.ReceiverName}}.mx.RUnlock()
+
+	out := make(map[{{.KeyType}}]{{.ValueType}}, len({{.ReceiverName}}.impl))
+	for k, v := range {{.ReceiverName}}.impl {
+		out[k] = v
+	}
+
+	return out
+}
+`
+
+// SizeTmpl wraps the `Size` func
+const SizeTmpl = `// Size returns the number of elements in the underlying map[{{.KeyType}}]{{.ValueType}}
+func ({{.ReceiverName}} *{{.StructName}}) Size() int {
+	defer {{.ReceiverName}}.mx.RUnlock()
+	{{.ReceiverName}}.mx.RLock()
+
+	return len({{.ReceiverName}}.impl)
 }
 `

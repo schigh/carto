@@ -1,7 +1,7 @@
 // AbsorbMap will take all the keys and values from another map and overwrite any existing keys
 func ({{.ReceiverName}} *{{.StructName}}) AbsorbMap(regularMap map[{{.KeyType}}]{{.ValueType}}) {
+defer {{.ReceiverName}}.mx.Unlock()
 	{{.ReceiverName}}.mx.Lock()
-    defer {{.ReceiverName}}.mx.Unlock()
 
 {{if .LazyInstantiates}}\\\
 	{{.ReceiverName}}.onceToken.Do(func() {

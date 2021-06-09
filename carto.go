@@ -27,6 +27,8 @@ var allTemplates = []string{
 	tmpl.AbsorbMapTmpl,
 	tmpl.DeleteTmpl,
 	tmpl.ClearTmpl,
+	tmpl.ValueTmpl,
+	tmpl.SizeTmpl,
 }
 
 var (

@@ -46,3 +46,9 @@ const DeleteTmpl = `{{.DeleteTmpl}}`
 
 // ClearTmpl wraps the `Clear` func
 const ClearTmpl = `{{.ClearTmpl}}`
+
+// ValueTmpl wraps the `Value` func
+const ValueTmpl = `{{.ValueTmpl}}`
+
+// SizeTmpl wraps the `Size` func
+const SizeTmpl = `{{.SizeTmpl}}`
