@@ -36,6 +36,7 @@ type tmplTemplate struct {
 	ClearTmpl     string
 	ValueTmpl     string
 	SizeTmpl      string
+	EachTmpl      string
 }
 
 func getFileStr(pwd, filename string) string {
@@ -66,6 +67,7 @@ func main() {
 	tmplBytes := getFileStr(pwd, "tmpl")
 	valueBytes := getFileStr(pwd, "value")
 	sizeBytes := getFileStr(pwd, "size")
+	eachBytes := getFileStr(pwd, "each")
 
 	tmpl := tmplTemplate{
 		GenDate:       time.Now().Format(time.RFC1123),
@@ -79,6 +81,7 @@ func main() {
 		ClearTmpl:     clearBytes,
 		ValueTmpl:     valueBytes,
 		SizeTmpl:      sizeBytes,
+		EachTmpl:      eachBytes,
 	}
 
 	var b bytes.Buffer

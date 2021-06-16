@@ -52,3 +52,6 @@ const ValueTmpl = `{{.ValueTmpl}}`
 
 // SizeTmpl wraps the `Size` func
 const SizeTmpl = `{{.SizeTmpl}}`
+
+// EachTmpl wraps the `Each` func
+const EachTmpl = `{{.EachTmpl}}`

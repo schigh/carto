@@ -9,17 +9,17 @@ The templates are maintained there for greater readability.
 
 // MapTmpl contains all the necessary data to generate a carto map
 type MapTmpl struct {
-	GenDate               string
-	PackageName           string
-	StructName            string
-	KeyTypePackage        string
-	KeyType               string
-	ValueType             string
-	ValueTypePackage      string
-	ReceiverName          string
-	GetReturnsBool        bool
-	LazyInstantiates      bool
-	GetDefault            bool
+	GenDate          string
+	PackageName      string
+	StructName       string
+	KeyTypePackage   string
+	KeyType          string
+	ValueType        string
+	ValueTypePackage string
+	ReceiverName     string
+	GetReturnsBool   bool
+	LazyInstantiates bool
+	GetDefault       bool
 }
 
 // HeadTmpl is the file header, including imports and struct declaration.
@@ -183,5 +183,25 @@ func ({{.ReceiverName}} *{{.StructName}}) Size() int {
 	{{.ReceiverName}}.mx.RLock()
 
 	return len({{.ReceiverName}}.impl)
+}
+`
+
+// EachTmpl wraps the `Each` func
+const EachTmpl = `// Each runs a function over each key/value pair in the {{.StructName}}
+// If the function returns false, the interation through the underlying
+// map will halt.
+// This function does not mutate the underlying map, although the values
+// of the map may be mutated in place
+// !!!Warning: calls to {{.ReceiverName}}.Set or {{.ReceiverName}}.Delete will deadlock !!!
+func ({{.ReceiverName}} *{{.StructName}}) Each(f func(key {{.KeyType}}, value {{.ValueType}}) bool) {
+	defer {{.ReceiverName}}.mx.RUnlock()
+	{{.ReceiverName}}.mx.RLock()
+
+	for _k := range {{.ReceiverName}}.impl {
+		_v := {{.ReceiverName}}.impl[_k]
+		if !f(_k, _v) {
+			return
+		}
+	}
 }
 `

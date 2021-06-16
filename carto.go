@@ -29,6 +29,7 @@ var allTemplates = []string{
 	tmpl.ClearTmpl,
 	tmpl.ValueTmpl,
 	tmpl.SizeTmpl,
+	tmpl.EachTmpl,
 }
 
 var (
