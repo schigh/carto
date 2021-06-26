@@ -260,6 +260,9 @@ func parsePackage(ppath string) (packageName string, typeName string, err error)
 
 	if numParts == 1 {
 		typeName = pathParts[0]
+		if isPointerType {
+			typeName = "*" + typeName
+		}
 		return
 	}
 
