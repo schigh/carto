@@ -234,20 +234,31 @@ func Test_parsePackage(t *testing.T) {
 		ppath   string
 		pName   string
 		tName   string
+		ctx     pkgCtx
 		wantErr bool
 	}{
 		{
-			name:    "interface{}",
+			name:    "interface{} as value",
 			ppath:   "interface{}",
 			pName:   "",
 			tName:   "interface{}",
+			ctx:     valueCtx,
 			wantErr: false,
+		},
+		{
+			name:    "interface{} as key",
+			ppath:   "interface{}",
+			pName:   "",
+			tName:   "interface{}",
+			ctx:     keyCtx,
+			wantErr: true,
 		},
 		{
 			name:    "package path",
 			ppath:   "github.com/schigh/carto.Foo",
 			pName:   "github.com/schigh/carto",
 			tName:   "carto.Foo",
+			ctx:     valueCtx,
 			wantErr: false,
 		},
 		{
@@ -255,17 +266,77 @@ func Test_parsePackage(t *testing.T) {
 			ppath:   "*github.com/schigh/carto.Foo",
 			pName:   "github.com/schigh/carto",
 			tName:   "*carto.Foo",
+			ctx:     valueCtx,
+			wantErr: false,
+		},
+		{
+			name:    "slices",
+			ppath:   "[]github.com/schigh/carto.Foo",
+			pName:   "github.com/schigh/carto",
+			tName:   "[]carto.Foo",
+			ctx:     valueCtx,
+			wantErr: false,
+		},
+		{
+			name:    "arrays",
+			ppath:   "[8]github.com/schigh/carto.Foo",
+			pName:   "github.com/schigh/carto",
+			tName:   "[8]carto.Foo",
+			ctx:     valueCtx,
+			wantErr: false,
+		},
+		{
+			name:    "slice ptr",
+			ppath:   "[]*github.com/schigh/carto.Foo",
+			pName:   "github.com/schigh/carto",
+			tName:   "[]*carto.Foo",
+			ctx:     valueCtx,
+			wantErr: false,
+		},
+		{
+			name:    "array ptr",
+			ppath:   "[8]*github.com/schigh/carto.Foo",
+			pName:   "github.com/schigh/carto",
+			tName:   "[8]*carto.Foo",
+			ctx:     valueCtx,
+			wantErr: false,
+		},
+		{
+			name:    "map",
+			ppath:   "map[string]github.com/schigh/carto.Foo",
+			pName:   "github.com/schigh/carto",
+			tName:   "map[string]carto.Foo",
+			ctx:     valueCtx,
+			wantErr: false,
+		},
+		{
+			name:    "more map",
+			ppath:   "map[foo/bar/baz.Baz]github.com/schigh/carto.Foo",
+			pName:   "github.com/schigh/carto",
+			tName:   "map[baz.Baz]carto.Foo",
+			ctx:     valueCtx,
+			wantErr: false,
+		},
+		{
+			name:    "more with everything",
+			ppath:   "map[foo/bar/baz.Baz][8]*github.com/schigh/carto.Foo",
+			pName:   "github.com/schigh/carto",
+			tName:   "map[baz.Baz][8]*carto.Foo",
+			ctx:     valueCtx,
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pn, tn, err := parsePackage(tt.ppath)
+			pn, tn, err := parsePackage(tt.ppath, tt.ctx)
 			if err != nil && !tt.wantErr {
 				t.Fatalf("parsePackage{} => unexpected error: %v", err)
 			}
 			if tt.wantErr && err == nil {
 				t.Fatal("parsePackage() => error expected")
+			}
+			if err != nil && tt.wantErr {
+				return
 			}
 			if pn != tt.pName {
 				t.Errorf("parsePackage() => wanted %s, got %s", tt.pName, pn)

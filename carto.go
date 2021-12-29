@@ -8,8 +8,8 @@ import (
 	"go/format"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 	"time"
@@ -44,10 +44,31 @@ var (
 	getDefault       bool
 
 	version bool
-	Version = "2021-06-08"
+	Version = "2021-12-29"
 
 	reserved = []string{"i", "k", "v", "keys", "onceToken", "value", "ok", "otherMap", "mx", "impl"}
+
+	keyRx          = regexp.MustCompile(`^(?:(?P<pkg>(?:[\w.-]+/)*\w+)\.)?(?P<type>\w+)$`)
+	defaultValueRx = regexp.MustCompile(`^(?P<slc>\[(?P<sz>\d*)])?(?P<ptr>\*)?(?:(?P<pkg>(?:[\w.-]+/)*\w+)\.)?(?P<type>(\w+|interface{}))$`)
+	mapValueRx     = regexp.MustCompile(`^map\[(?:(?P<map_pkg>(?:[\w.-]+/)*\w+)\.)?(?P<map_type>\w+)](?P<slc>\[(?P<sz>\d*)])?(?P<ptr>\*)?(?:(?P<pkg>(?:[\w.-]+/)*\w+)\.)?(?P<type>(\w+|interface{}))$`)
 )
+
+type pkgCtx byte
+
+const (
+	_ pkgCtx = iota
+	keyCtx
+	valueCtx
+)
+
+func (c pkgCtx) valid() bool {
+	switch c {
+	case keyCtx, valueCtx:
+		return true
+	}
+
+	return false
+}
 
 func usage() {
 	io.PrintBold("C A R T O\n\n")
@@ -80,18 +101,22 @@ func main() {
 		os.Exit(0)
 	}
 
-	packageName, structName, keyType, valueType, errList := ensureRequired(packageName, structName, keyType, valueType)
+	var errList []string
+	packageName, structName, keyType, valueType, errList = ensureRequired(packageName, structName, keyType, valueType)
 	if len(errList) > 0 {
 		err := errors.New(strings.Join(errList, "\n"))
 		handleError(err)
 	}
 
-	keyTypePackage, keyType, err := parsePackage(keyType)
+	var keyTypePackage, valueTypePackage string
+	var err error
+
+	keyTypePackage, keyType, err = parsePackage(keyType, keyCtx)
 	if err != nil {
 		handleError(err)
 	}
 
-	valueTypePackage, valueType, err := parsePackage(valueType)
+	valueTypePackage, valueType, err = parsePackage(valueType, valueCtx)
 	if err != nil {
 		handleError(err)
 	}
@@ -112,16 +137,20 @@ func main() {
 		GetDefault:       getDefault,
 	}
 
-	b, err := parseAndExecTemplates(&mt, allTemplates)
-	if err != nil {
-		handleError(err)
-	}
-	formatted, err := applyFormatting(b.Bytes())
+	var b *bytes.Buffer
+	b, err = parseAndExecTemplates(&mt, allTemplates)
 	if err != nil {
 		handleError(err)
 	}
 
-	fileCreated, err := createOutFile(outFileName, formatted)
+	var formatted []byte
+	formatted, err = applyFormatting(b.Bytes())
+	if err != nil {
+		handleError(err)
+	}
+
+	var fileCreated bool
+	fileCreated, err = createOutFile(outFileName, formatted)
 	if err != nil {
 		handleError(err)
 	}
@@ -245,33 +274,97 @@ func createOutFile(fn string, data []byte) (bool, error) {
 	return false, nil
 }
 
-func parsePackage(ppath string) (packageName string, typeName string, err error) {
+func parsePackage(ppath string, pCtx pkgCtx) (packageName string, typeName string, err error) {
+	if !pCtx.valid() {
+		err = errors.New("invalid context for package parsing")
+	}
+
 	if ppath == "" {
 		err = errors.New("type or package declaration was empty")
 		return
 	}
-	isPointerType := ppath[0] == '*'
-	if isPointerType {
-		ppath = ppath[1:]
-	}
 
-	pathParts := strings.Split(ppath, ".")
-	numParts := len(pathParts)
-
-	if numParts == 1 {
-		typeName = pathParts[0]
-		if isPointerType {
-			typeName = "*" + typeName
-		}
+	if pCtx == keyCtx {
+		packageName, typeName, err = parseKeyPackage(ppath)
 		return
 	}
 
-	// two parts
-	packageName = strings.Join(pathParts[:numParts-1], ".")
-	typeName = path.Base(packageName) + "." + pathParts[numParts-1]
-	if isPointerType {
-		typeName = "*" + typeName
+	var m map[string]string
+	if defaultValueRx.MatchString(ppath) {
+		m = rxNamedExtract(defaultValueRx, ppath)
+	} else if mapValueRx.MatchString(ppath) {
+		m = rxNamedExtract(mapValueRx, ppath)
+		typeName = typeName + "map["
+		if m["map_pkg"] != "" {
+			typeName = typeName + filepath.Base(m["map_pkg"]) + "."
+		}
+		typeName = typeName + m["map_type"] + "]"
+	} else {
+		err = fmt.Errorf("the package path '%s' could not be parsed", ppath)
+		return
 	}
 
+	if m["slc"] != "" {
+		typeName = typeName + "["
+		if m["sz"] != "" {
+			typeName = typeName + m["sz"]
+		}
+		typeName = typeName + "]"
+	}
+
+	if m["ptr"] != "" {
+		typeName = typeName + "*"
+	}
+
+	if m["pkg"] != "" {
+		packageName = m["pkg"]
+		typeName = typeName + filepath.Base(packageName) + "." + m["type"]
+		return
+	}
+
+	typeName = m["type"]
+
 	return
+}
+
+func parseKeyPackage(ppath string) (packageName string, typeName string, err error) {
+	if !keyRx.MatchString(ppath) {
+		err = fmt.Errorf("path '%s' is an invalid key type", ppath)
+		return
+	}
+	m := rxNamedExtract(keyRx, ppath)
+	packageName = m["pkg"]
+	typeName = m["type"]
+	return
+}
+
+// this extracts regex values only for named captures...
+// unnamed captures are skipped
+func rxNamedExtract(rx *regexp.Regexp, s string) map[string]string {
+	// the item at index zero is always the full match without captures
+	names := rx.SubexpNames()
+	if len(names) < 1 {
+		return nil
+	}
+	names = names[1:]
+	sm := rx.FindStringSubmatch(s)
+	if len(sm) < 1 {
+		return nil
+	}
+	sm = sm[1:]
+
+	// assert that length of names == length of sm
+	// see stdlib regexp implementation for details
+
+	out := make(map[string]string)
+
+	for i := range names {
+		if names[i] == "" {
+			// unnamed capture group
+			continue
+		}
+		out[names[i]] = sm[i]
+	}
+
+	return out
 }
