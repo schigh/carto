@@ -278,6 +278,14 @@ func Test_parsePackage(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "slices2",
+			ppath:   "[]Foo",
+			pName:   "",
+			tName:   "[]Foo",
+			ctx:     valueCtx,
+			wantErr: false,
+		},
+		{
 			name:    "arrays",
 			ppath:   "[8]github.com/schigh/carto.Foo",
 			pName:   "github.com/schigh/carto",

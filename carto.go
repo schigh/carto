@@ -322,7 +322,7 @@ func parsePackage(ppath string, pCtx pkgCtx) (packageName string, typeName strin
 		return
 	}
 
-	typeName = m["type"]
+	typeName = typeName + m["type"]
 
 	return
 }
